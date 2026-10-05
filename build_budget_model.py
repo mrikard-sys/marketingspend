@@ -63,7 +63,8 @@ ws.cell(r,7,"WAR T-12 reports 3.5% (56 leases ÷ 1,582 traffic). Leads in this m
 R["ltl"]=f"Inputs!$B${r}"; r+=1
 r=put([("t3","Recent (T-3) lead-to-lease rate, for stress test",0.013,PCT,"%","ACTUAL: WAR T-3 conversion 1.3% (229 traffic, only 6 apps). Used only in the Summary stress test"),],r); r+=1
 section(ws,r,"Concessions (memo only, not in the marketing budget)",7); r+=1
-r=put([("cw","Weeks free offered per new lease",6,NUM,"weeks","ACTUAL: WAR 10/4/26 current special is 6 weeks free + waived L&L admin"),],r); r+=1
+r=put([("b26","2026 budgeted ad spend (memo)",43758,CUR,"$","ACTUAL: 2026 Ad Spend Tracking. Actual was $53,958; $10,200 over because CoStar billed Apr–Sep after it was cut from budget"),
+("cw","Weeks free offered per new lease",6,NUM,"weeks","ACTUAL: WAR 10/4/26 current special is 6 weeks free + waived L&L admin"),],r); r+=1
 section(ws,r,"Budget guardrails",7); r+=1
 r=put([("cont","Contingency / reserve",0.10,PCT,"%","Cushion for slow months, price hikes, surprise vacancies"),
 ("cap","Target max cost per lease (% of one month's rent)",0.50,PCT,"%","Common rule of thumb: keep acquisition cost under ~½ month's rent"),],r); r+=1
@@ -85,20 +86,20 @@ R["seas0"]=s0; R["seasChk"]=f"Inputs!$C${r}"; r+=2
 # Channels
 section(ws,r,"Lead channels (2027 lease mix and channel conversion)",10); r+=1
 hdr(ws,r,["Channel","% of 2027 new leases","Channel lead-to-lease","Cost per lead ($)","Fixed monthly fee ($)","Cost per signed lease ($)","2026 actual spend ($)","T-12 leads (memo)","T-12 leases (memo)","Notes"]); r+=1
-ch=[("Zillow",0.25,0.022,25,0,0,634,14,"Mix & conversion ACTUAL (WAR T-12). Cost PLACEHOLDER: confirm Zillow pricing"),
-("Property website",0.232,0.057,0,0,0,228,13,"ACTUAL mix/conv. Site cost is in fixed costs"),
-("MLS",0.161,0.049,0,0,0,183,9,"ACTUAL mix/conv. Cost PLACEHOLDER: any MLS / agent fees?"),
-("Google (organic / Business Profile)",0.107,0.128,0,0,0,47,6,"ACTUAL mix/conv. Best converting source"),
-("Rently (self-tour listings)",0.107,0.033,0,150,0,184,6,"ACTUAL mix/conv. Fee PLACEHOLDER"),
-("PPC (paid search)",0.054,0.029,35,0,0,103,3,"ACTUAL mix/conv. CPL PLACEHOLDER"),
-("Apartments.com / CoStar",0.018,0.008,0,1200,0,120,1,"ACTUAL mix/conv: 1 lease from 120 leads. Fee PLACEHOLDER: review before renewing"),
-("Apartment List",0.018,0.083,0,0,350,12,1,"ACTUAL mix/conv. Pay-per-lease fee PLACEHOLDER"),
-("All other / unknown",0.053,0.042,0,0,0,71,3,"ACTUAL: sister community, RentCafe, walk-in, unknown, etc."),]
+ch=[("Zillow",0.268,0.022,0,958,0,11244,634,14,"Mix/conv ACTUAL (WAR T-12). Fee ACTUAL: $958/mo since Oct 2026 (was $930). Mix includes Apts.com's former share"),
+("Property website",0.232,0.057,0,0,0,0,228,13,"ACTUAL. $0 on ad tracker; hosting is in fixed costs. Digible ads may land here"),
+("MLS",0.161,0.049,0,0,0,None,183,9,"ACTUAL mix/conv. Not on ad tracker: any MLS / agent fees?"),
+("Google (organic / Business Profile)",0.107,0.128,0,0,0,None,47,6,"ACTUAL mix/conv. Best converting source, $0 cost"),
+("Rently (self-tour listings)",0.107,0.033,0,0,0,None,184,6,"ACTUAL mix/conv. Not on ad tracker: confirm if billed elsewhere"),
+("Digible (PPC / paid digital)",0.054,0.029,0,2295,0,27540,103,3,"Fee ACTUAL: $2,295/mo. WAR credits PPC with only 3 leases; get Digible's attribution report"),
+("Apartments.com / CoStar",0.0,0.008,0,0,0,15174,120,1,"Cancelled: last invoice 9/30/26. 2026: $15,174 for 1 lease. Enter a fee and mix here if renewed"),
+("Apartment List",0.018,0.083,0,0,0,None,12,1,"ACTUAL mix/conv. Not on ad tracker; enter pay-per-lease fee if charged"),
+("All other / unknown",0.053,0.042,0,0,0,None,71,3,"ACTUAL: sister community, RentCafe, walk-in, unknown, etc. (AptGeo $0 in 2026)"),]
 c0=r
-for name,sh,cv,cpl,fx,cpls,tl,tls,note in ch:
+for name,sh,cv,cpl,fx,cpls,act,tl,tls,note in ch:
     ws.cell(r,1,name).font=BLUE; ws.cell(r,1).fill=YEL
     inp(ws.cell(r,2),sh,PCT); inp(ws.cell(r,3),cv,PCT); inp(ws.cell(r,4),cpl,CUR); inp(ws.cell(r,5),fx,CUR); inp(ws.cell(r,6),cpls,CUR)
-    inp(ws.cell(r,7),None,CUR); inp(ws.cell(r,8),tl,NUM,key=False); inp(ws.cell(r,9),tls,NUM,key=False)
+    inp(ws.cell(r,7),act,CUR); inp(ws.cell(r,8),tl,NUM,key=False); inp(ws.cell(r,9),tls,NUM,key=False)
     ws.cell(r,10,note).font=Font(name=F,italic=True,color="595959"); r+=1
 c1=r-1
 ws.cell(r,1,"Total (lease mix must = 100%)").font=B
@@ -204,9 +205,11 @@ def srow(k,label,f,fmt,note="",bold=False):
     c=sm.cell(r,2,f); c.number_format=fmt; c.font=Font(name=F,bold=bold,color="008000" if "Monthly Plan" in f or "Inputs!" in f else "000000")
     sm.cell(r,5,note).font=Font(name=F,italic=True,color="595959"); S[k]=f"B{r}"; r+=1
 srow("tot","Total 2027 marketing budget",T("tot"),CUR,bold=True)
-srow("pu","Budget per unit per year",f"=IFERROR(B5/{R['units']},0)",CUR)
-srow("pum","Budget per unit per month",f"=IFERROR(B5/{R['units']}/12,0)",CUR2)
-srow("gpr","% of gross potential rent",f"=IFERROR(B5/({R['units']}*{R['rent']}*12),0)",PCT,"Many operators land ~1–3% of GPR")
+srow("ads","2027 paid lead-channel spend",f"='Monthly Plan'!$N${P['chsub']}",CUR,"Compare: 2026 actual $53,958, 2026 budget $43,758")
+srow("adv","vs. 2026 budgeted ad spend",f"={S['ads']}-{R['b26']}",CUR,"Positive = more than the 2026 budget")
+srow("pu","Budget per unit per year",f"=IFERROR({S['tot']}/{R['units']},0)",CUR)
+srow("pum","Budget per unit per month",f"=IFERROR({S['tot']}/{R['units']}/12,0)",CUR2)
+srow("gpr","% of gross potential rent",f"=IFERROR({S['tot']}/({R['units']}*{R['rent']}*12),0)",PCT,"Many operators land ~1–3% of GPR")
 r+=1; section(sm,r,"Lease demand",5); r+=1
 srow("exp","Leases expiring in 2027",T("exp"),NUM)
 srow("ren","Renewals",T("ren"),NUM)
@@ -269,8 +272,9 @@ lines=[("How this model works",H),
 ("",BLK),("Data to pull for Harrison Landing (replace placeholders)",B),
 ("Done from the WAR: rent, occupancy, renewal rate, lease breaks, funnel, lead sources, days vacant.",BLK),
 ("1. Lease expiration report: count of 2027 expirations by month (replaces the placeholder seasonality curve).",BLK),
-("2. Invoices / contracts: Zillow, Apartments.com, Rently, PPC, Apartment List, MLS, software; note 2027 renewal pricing.",BLK),
-("3. 2026 actual marketing spend by channel (for the variance column).",BLK),
+("Done from the 2026 Ad Spend Tracking sheet: Digible, Zillow, CoStar (cancelled 9/30/26), AptGeo and website spend.",BLK),
+("2. 2027 price changes from Digible and Zillow; whether Rently, MLS or Apartment List are billed somewhere else.",BLK),
+("3. Digible's lead and lease attribution report (WAR may credit their ads to Property Website).",BLK),
 ("4. Fixed-cost items: CRM, AI leasing, reputation, website, photography, signage, events.",BLK),
 ("",BLK),("Rolling out to the portfolio",B),
 ("Copy this workbook once per property (or duplicate the Inputs tab) and change the Inputs. Prosper 207 is in lease-up and needs a separate lease-up model (absorption pace, not turnover).",BLK),]
