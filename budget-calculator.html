@@ -1,0 +1,399 @@
+<title>Marketing Budget Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: data-point form on the left, sticky budget readout on the right; stacks with readout first on phones */
+:root{
+  --bg:#f3f5f8; --surface:#ffffff; --ink:#16233a; --muted:#5b6678; --line:#d9dee7;
+  --accent:#1f3864; --accent-soft:#e6ebf4; --gold:#b98a2e; --gold-soft:#f6eedc;
+  --good:#2f7a4f; --good-soft:#e3f1e8; --warn:#9a5b12; --warn-soft:#f8ecd9;
+  --f-ui:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1520; --surface:#172131; --ink:#e7ecf4; --muted:#9aa6b8; --line:#2a3649;
+  --accent:#8fb0e8; --accent-soft:#1e2c44; --gold:#d9b25e; --gold-soft:#2d2717;
+  --good:#79c79a; --good-soft:#18301f; --warn:#e2a95a; --warn-soft:#33260f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1520; --surface:#172131; --ink:#e7ecf4; --muted:#9aa6b8; --line:#2a3649;
+  --accent:#8fb0e8; --accent-soft:#1e2c44; --gold:#d9b25e; --gold-soft:#2d2717;
+  --good:#79c79a; --good-soft:#18301f; --warn:#e2a95a; --warn-soft:#33260f; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:15px;line-height:1.5;padding:0 16px}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 48px}
+header.top{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between;margin-bottom:22px}
+h1{font-size:1.75rem;line-height:1.15;margin:0;text-wrap:balance;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:6px 0 0;max-width:62ch}
+.eyebrow{font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.propbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+select,input,button{font:inherit;color:inherit}
+select,input[type=text],input[type=number]{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+input[type=number]{font-family:var(--f-num);font-size:.95rem;text-align:right}
+input::placeholder{color:var(--muted);opacity:.75}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button{border-radius:8px;border:1px solid var(--line);background:var(--surface);padding:8px 14px;cursor:pointer;font-weight:600}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+button.ghost{background:transparent}
+button:disabled{opacity:.5;cursor:default}
+.grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:1fr}.results{order:-1;position:static!important}}
+.form{display:flex;flex-direction:column;gap:18px}
+fieldset{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:16px 18px 6px;margin:0;min-width:0}
+legend{font-weight:700;padding:0 6px;font-size:1rem}
+.row{display:grid;grid-template-columns:minmax(0,1fr) 140px;gap:6px 14px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:0}
+.row label{font-weight:600}
+.row .hint{grid-column:1/-1;color:var(--muted);font-size:.83rem;margin-top:-2px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.chip{font-size:.7rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:999px;white-space:nowrap}
+.chip.in{background:var(--good-soft);color:var(--good)}
+.chip.bm{background:var(--gold-soft);color:var(--gold)}
+.chip.req{background:var(--warn-soft);color:var(--warn)}
+.unit{position:relative}
+.unit span{position:absolute;top:50%;transform:translateY(-50%);font-family:var(--f-num);color:var(--muted);font-size:.85rem;pointer-events:none}
+.unit.pre span{left:10px}.unit.pre input{padding-left:22px}
+.unit.suf span{right:10px}.unit.suf input{padding-right:26px}
+.unit input{width:100%}
+.sources{display:flex;flex-direction:column;gap:8px;padding:10px 0 12px}
+.src{display:grid;grid-template-columns:minmax(0,1fr) 130px 34px;gap:8px}
+.src button{padding:0;font-size:1.1rem;line-height:1;color:var(--muted)}
+.results{position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px);display:flex;flex-direction:column;gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.hero{border-color:var(--accent);box-shadow:0 1px 0 var(--accent-soft),0 8px 24px -16px var(--accent)}
+.big{font-family:var(--f-num);font-size:2.4rem;font-weight:500;letter-spacing:-.02em;line-height:1.1;margin:4px 0 2px;font-variant-numeric:tabular-nums}
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+.kpi{background:var(--accent-soft);border-radius:8px;padding:8px 10px;min-width:0}
+.kpi b{display:block;font-family:var(--f-num);font-weight:500;font-size:1.02rem;font-variant-numeric:tabular-nums}
+.kpi small{color:var(--muted);font-size:.74rem}
+.meter{height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin:8px 0 4px}
+.meter i{display:block;height:100%;background:var(--gold);border-radius:99px;transition:width .25s}
+@media (prefers-reduced-motion:reduce){.meter i{transition:none}}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+td,th{padding:7px 0;border-top:1px solid var(--line);text-align:left;vertical-align:top}
+td.n,th.n{text-align:right;font-family:var(--f-num);font-size:.92rem;white-space:nowrap;padding-left:12px}
+tr.total td{font-weight:700;border-top:2px solid var(--ink)}
+tr:first-child td{border-top:0}
+.note{color:var(--muted);font-size:.83rem;margin:8px 0 0}
+.cmp{margin-top:10px;padding:10px 12px;border-radius:8px;font-size:.88rem}
+.cmp.under{background:var(--warn-soft);color:var(--warn)}
+.cmp.over{background:var(--good-soft);color:var(--good)}
+h2{font-size:1rem;margin:0 0 8px}
+.status{font-size:.83rem;color:var(--muted);min-height:1.3em}
+.confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.88rem;background:var(--warn-soft);color:var(--warn);padding:8px 10px;border-radius:8px}
+.portfolio{margin-top:28px}
+.tablewrap{overflow-x:auto}
+.portfolio table td,.portfolio table th{padding:8px 10px 8px 0}
+.portfolio th{font-size:.72rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600;border-top:0}
+.example{display:inline-block;margin-left:6px}
+.req-msg{color:var(--warn);font-weight:600}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Haven Homes · Annual planning</div>
+      <h1>Marketing Budget Calculator</h1>
+      <p class="sub">Enter each data point as you get it. Blank fields use an industry benchmark, marked in gold, so you get a budget right away and it gets more accurate as you fill in real numbers.</p>
+    </div>
+    <div class="propbar">
+      <label class="eyebrow" for="propSel">Property</label>
+      <select id="propSel"></select>
+      <button id="newBtn" class="ghost" type="button">New</button>
+      <button id="saveBtn" class="primary" type="button">Save</button>
+      <button id="delBtn" class="ghost" type="button">Delete</button>
+    </div>
+  </header>
+  <div id="confirmBox" hidden></div>
+  <p id="status" class="status" aria-live="polite"></p>
+
+  <div class="grid">
+    <form id="form" class="form" autocomplete="off">
+      <fieldset>
+        <legend>Property</legend>
+        <div class="row"><label for="name">Property name</label><input id="name" type="text" placeholder="e.g. Harrison Landing"></div>
+        <div id="f-property"></div>
+      </fieldset>
+      <fieldset><legend>Leasing activity</legend><div id="f-leasing"></div></fieldset>
+      <fieldset>
+        <legend>Paid lead sources you’re committed to</legend>
+        <p class="note" style="margin:0 0 4px">Monthly fees for listings and ad vendors (Zillow, MLS, ad agency). Used to compare against the recommended lead budget.</p>
+        <div id="sources" class="sources"></div>
+        <button id="addSrc" type="button" class="ghost" style="margin-bottom:14px">+ Add source</button>
+      </fieldset>
+      <fieldset><legend>Retention &amp; other costs</legend><div id="f-costs"></div></fieldset>
+    </form>
+
+    <aside class="results" aria-label="Budget results">
+      <div class="card hero">
+        <div class="eyebrow" id="resTitle">Recommended annual budget</div>
+        <div class="big" id="total">–</div>
+        <div id="resSub" class="note" style="margin:0"></div>
+        <div class="meter" aria-hidden="true"><i id="meterBar" style="width:0"></i></div>
+        <div class="note" style="margin:0" id="meterTxt"></div>
+        <div class="kpis">
+          <div class="kpi"><b id="kNew">–</b><small>new leases needed</small></div>
+          <div class="kpi"><b id="kLeads">–</b><small>leads needed</small></div>
+          <div class="kpi"><b id="kUnit">–</b><small>per unit / year</small></div>
+        </div>
+        <div id="cmp"></div>
+      </div>
+      <div class="card">
+        <h2>Budget breakdown</h2>
+        <table><tbody id="breakdown"></tbody></table>
+        <p class="note" id="method"></p>
+      </div>
+      <div class="card">
+        <h2>Lease math</h2>
+        <table><tbody id="math"></tbody></table>
+      </div>
+      <div class="card">
+        <h2>Cost of vacancy</h2>
+        <table><tbody id="vac"></tbody></table>
+        <p class="note">Use these to explain the spend: leasing a home faster is usually worth more than the marketing it takes.</p>
+      </div>
+      <button id="copyBtn" type="button">Copy summary</button>
+    </aside>
+  </div>
+
+  <section class="portfolio card" id="portfolio" hidden>
+    <h2>Saved properties</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Property</th><th class="n">Units</th><th class="n">Data entered</th><th class="n">New leases</th><th class="n">Recommended</th><th class="n">Per unit</th></tr></thead>
+      <tbody id="portBody"></tbody>
+    </table></div>
+  </section>
+</div>
+
+<script>
+(function(){
+const FIELDS = [
+  {k:"units", g:"property", label:"Total units", req:true, step:1, hint:"Homes at the property."},
+  {k:"rent", g:"property", label:"Average monthly rent", req:true, pre:"$", step:1, hint:"Current asking rent is best."},
+  {k:"occ", g:"property", label:"Current occupancy", suf:"%", bm:93, hint:"Physical occupancy from the weekly report."},
+  {k:"tocc", g:"property", label:"Target occupancy", suf:"%", bm:95, hint:"Where asset management wants the property by year end."},
+  {k:"dv", g:"property", label:"Average days vacant per turn", bm:30, step:1, hint:"Move-out to move-in."},
+  {k:"exp", g:"leasing", label:"Lease expirations next year", step:1, bmFn:v=>Math.round(occupied(v)*0.85), bmTxt:"85% of occupied homes", hint:"Count from the lease expiration schedule."},
+  {k:"ren", g:"leasing", label:"Renewal rate", suf:"%", bm:55, hint:"Renewals ÷ expirations, trailing 12 months."},
+  {k:"brk", g:"leasing", label:"Lease breaks / early move-outs per year", step:1, bmFn:v=>Math.round((num(v.units)||0)*0.05), bmTxt:"5% of units", hint:"Breaks, skips and evictions."},
+  {k:"ltl", g:"leasing", label:"Lead-to-lease rate", suf:"%", bm:3.5, hint:"Leases ÷ total leads (traffic)."},
+  {k:"cpl", g:"costs", label:"Target cost per new lease", suf:"%", bm:50, hint:"As a % of one month’s rent. Half a month is a common ceiling."},
+  {k:"inc", g:"costs", label:"Renewal incentive per renewal", pre:"$", bm:0, step:1, hint:"Gift card, upgrade or credit offered to renew."},
+  {k:"evt", g:"costs", label:"Resident events & retention per year", pre:"$", bm:0, step:1, hint:"Events, gifts, surveys."},
+  {k:"oth", g:"costs", label:"Other marketing costs per year", pre:"$", bm:0, step:1, hint:"Photos, signage, print, software the property pays for."},
+  {k:"cont", g:"costs", label:"Contingency", suf:"%", bm:10, hint:"Reserve for slow months and price increases."},
+];
+const SAMPLE = {id:"__sample", name:"Sample property (example)", sample:true,
+  values:{units:150, rent:1700, occ:93, ren:60, ltl:3}, sources:[{name:"Zillow",monthly:900},{name:"Paid search",monthly:1500}]};
+
+const $ = id => document.getElementById(id);
+const num = x => (x===""||x===null||x===undefined||isNaN(+x)) ? null : +x;
+const money = n => (n<0?"-":"")+"$"+Math.round(Math.abs(n)).toLocaleString("en-US");
+const int = n => Math.round(n).toLocaleString("en-US");
+const pct = n => (Math.round(n*10)/10).toLocaleString("en-US")+"%";
+function occupied(v){ const u=num(v.units)||0, o=num(v.occ); return u*((o==null?93:o)/100); }
+function val(v,f){ const x=num(v[f.k]); if(x!=null) return {x, entered:true}; if(f.bmFn) return {x:f.bmFn(v), entered:false}; return {x:f.bm??null, entered:false}; }
+
+let state = {id:null, name:"", values:{}, sources:[]};
+let saved = {};           // id -> doc
+let db = null, dirty = false, confirmEl = null;
+
+// ---------- form ----------
+function buildForm(){
+  for (const g of ["property","leasing","costs"]) $("f-"+g).innerHTML="";
+  for (const f of FIELDS){
+    const row=document.createElement("div"); row.className="row";
+    const wrapCls = f.pre?"unit pre":f.suf?"unit suf":"unit";
+    row.innerHTML = `<label for="in-${f.k}">${f.label}</label>
+      <div class="${wrapCls}">${f.pre?`<span>${f.pre}</span>`:""}<input id="in-${f.k}" type="number" inputmode="decimal" step="${f.step||"any"}" min="0">${f.suf?`<span>${f.suf}</span>`:""}</div>
+      <div class="hint"><span class="chip" id="chip-${f.k}"></span><span id="hint-${f.k}"></span></div>`;
+    $("f-"+f.g).appendChild(row);
+    row.querySelector("input").addEventListener("input", e=>{ state.values[f.k]=e.target.value; touch(); });
+  }
+  $("name").addEventListener("input", e=>{ state.name=e.target.value; touch(); });
+}
+function fillForm(){
+  $("name").value = state.name||"";
+  for (const f of FIELDS){ const x=state.values[f.k]; $("in-"+f.k).value = (x==null?"":x); }
+  renderSources();
+}
+function renderSources(){
+  const box=$("sources"); box.innerHTML="";
+  state.sources.forEach((s,i)=>{
+    const r=document.createElement("div"); r.className="src";
+    r.innerHTML=`<input type="text" id="src-n-${i}" aria-label="Source name" placeholder="Source name" value="${(s.name||"").replace(/"/g,"&quot;")}">
+      <div class="unit pre"><span>$</span><input type="number" id="src-m-${i}" aria-label="Monthly cost" min="0" step="1" placeholder="per month" value="${s.monthly??""}"></div>
+      <button type="button" aria-label="Remove source">×</button>`;
+    r.querySelector('input[type=text]').addEventListener("input",e=>{s.name=e.target.value; touch();});
+    r.querySelector('input[type=number]').addEventListener("input",e=>{s.monthly=e.target.value; touch();});
+    r.querySelector("button").addEventListener("click",()=>{state.sources.splice(i,1); renderSources(); touch();});
+    box.appendChild(r);
+  });
+  if(!state.sources.length){ const p=document.createElement("p"); p.className="note"; p.style.margin="0"; p.textContent="No sources added. The recommended budget still works without them."; box.appendChild(p); }
+}
+function touch(){ dirty=true; compute(); setStatus(db? "Unsaved changes" : ""); }
+
+// ---------- math ----------
+function calc(st){
+  const v=st.values, get={}; let entered=0;
+  for(const f of FIELDS){ get[f.k]=val(v,f); if(get[f.k].entered) entered++; }
+  const units=get.units.x, rent=get.rent.x;
+  if(!units||!rent) return {ok:false, entered, get};
+  const occ=get.occ.x, tocc=get.tocc.x, exp=get.exp.x, ren=get.ren.x, brk=get.brk.x, ltl=get.ltl.x||0.0001;
+  const renewals=exp*ren/100, moveExp=exp-renewals, moveouts=moveExp+brk;
+  const gap=Math.max(0, units*(tocc-occ)/100);
+  const newLeases=moveouts+gap, leads=newLeases/(ltl/100);
+  const cplTarget=rent*get.cpl.x/100;
+  const leadGen=newLeases*cplTarget;
+  const retention=renewals*get.inc.x+get.evt.x, other=get.oth.x;
+  const sub=leadGen+retention+other, cont=sub*get.cont.x/100, total=sub+cont;
+  const planned=(st.sources||[]).reduce((a,s)=>a+(num(s.monthly)||0)*12,0);
+  const plannedSub=planned+retention+other, plannedTotal=plannedSub*(1+get.cont.x/100);
+  return {ok:true, entered, get, units, rent, occ, tocc, exp, renewals, moveExp, brk, moveouts, gap, newLeases, leads,
+    cplTarget, leadGen, retention, other, cont, total, planned, plannedTotal,
+    perUnit:total/units, gprPct:total/(units*rent*12)*100,
+    vacLoss:moveouts*get.dv.x*rent/30, perDay:moveouts*rent/30, impliedCPL:leadGen/leads};
+}
+
+function compute(){
+  const r=calc(state);
+  for(const f of FIELDS){
+    const g=r.get[f.k], chip=$("chip-"+f.k), hint=$("hint-"+f.k), input=$("in-"+f.k);
+    if(g.entered){ chip.className="chip in"; chip.textContent="Entered"; hint.textContent=f.hint; }
+    else if(f.req){ chip.className="chip req"; chip.textContent="Required"; hint.textContent=f.hint; }
+    else { chip.className="chip bm"; chip.textContent="Benchmark";
+      const shown = f.bmTxt ? `${f.bmTxt}${g.x!=null&&r.get.units.x?` (${int(g.x)})`:""}` : (f.pre?"$":"")+g.x+(f.suf||"");
+      hint.textContent=`Using ${shown}. ${f.hint}`; }
+    input.placeholder = (!g.entered && !f.req && g.x!=null) ? String(g.x) : "";
+  }
+  const n=FIELDS.length;
+  $("meterBar").style.width=(r.entered/n*100)+"%";
+  $("meterTxt").textContent=`${r.entered} of ${n} data points entered · ${n-r.entered} using benchmarks`;
+  const nm = state.name || "this property";
+  if(!r.ok){
+    $("total").textContent="–"; $("resSub").innerHTML='<span class="req-msg">Enter total units and average rent to see a budget.</span>';
+    for(const id of ["kNew","kLeads","kUnit"]) $(id).textContent="–";
+    $("breakdown").innerHTML=$("math").innerHTML=$("vac").innerHTML=""; $("cmp").innerHTML=""; $("method").textContent="";
+    return r;
+  }
+  $("resTitle").textContent="Recommended annual budget · "+nm;
+  $("total").textContent=money(r.total);
+  $("resSub").textContent=`${money(r.total/12)} per month · ${pct(r.gprPct)} of gross potential rent`;
+  $("kNew").textContent=int(r.newLeases); $("kLeads").textContent=int(r.leads); $("kUnit").textContent=money(r.perUnit);
+  const rows=(arr)=>arr.map(([a,b,c])=>`<tr${c?` class="${c}"`:""}><td>${a}</td><td class="n">${b}</td></tr>`).join("");
+  $("breakdown").innerHTML=rows([
+    ["Lead generation (new leases × target cost per lease)",money(r.leadGen)],
+    ["Retention (renewal incentives + events)",money(r.retention)],
+    ["Other marketing costs",money(r.other)],
+    [`Contingency (${pct(r.get.cont.x)})`,money(r.cont)],
+    ["Total",money(r.total),"total"]]);
+  $("method").textContent=`Target cost per lease: ${money(r.cplTarget)} (${pct(r.get.cpl.x)} of ${money(r.rent)}). That allows about ${money(r.impliedCPL)} per lead at your conversion rate.`;
+  $("math").innerHTML=rows([
+    ["Lease expirations",int(r.exp)],["Renewals",int(r.renewals)],["Move-outs at expiration",int(r.moveExp)],
+    ["Lease breaks / early move-outs",int(r.brk)],["Leases to reach target occupancy",int(r.gap)],
+    ["New leases needed",int(r.newLeases),"total"],
+    [`Leads needed at ${pct(r.get.ltl.x)} conversion`,int(r.leads)],["Leads needed per month",int(r.leads/12)]]);
+  $("vac").innerHTML=rows([
+    ["Rent lost to vacancy this year",money(r.vacLoss)],
+    ["Value of leasing each home 1 day faster",money(r.perDay)],
+    ["Value of +5 points renewal rate",money(r.exp*0.05*(r.get.dv.x*r.rent/30+r.cplTarget))]]);
+  if(r.planned>0){
+    const d=r.planned-r.leadGen, cls=d<0?"under":"over";
+    $("cmp").innerHTML=`<div class="cmp ${cls}">Your paid sources cost <b>${money(r.planned)}</b> a year, ${money(Math.abs(d))} ${d<0?"under":"over"} the recommended lead budget of ${money(r.leadGen)}. Budget with your current sources: <b>${money(r.plannedTotal)}</b>.</div>`;
+  } else $("cmp").innerHTML="";
+  return r;
+}
+
+// ---------- properties ----------
+function setStatus(t){ $("status").textContent=t; }
+function renderSelect(){
+  const sel=$("propSel"); sel.innerHTML="";
+  const ids=Object.keys(saved).sort((a,b)=>(saved[a].name||"").localeCompare(saved[b].name||""));
+  if(!ids.length || state.id==="__sample"){ const o=new Option(SAMPLE.name,"__sample"); sel.add(o); }
+  for(const id of ids) sel.add(new Option(saved[id].name||"Untitled", id));
+  if(state.id && !saved[state.id] && state.id!=="__sample") sel.add(new Option((state.name||"New property")+" (unsaved)", state.id));
+  sel.value=state.id;
+  $("delBtn").disabled = !db || !saved[state.id];
+  $("saveBtn").disabled = !db;
+}
+function load(doc){
+  state={id:doc.id, name:doc.sample?"":(doc.name||""), values:{...(doc.values||{})}, sources:(doc.sources||[]).map(s=>({...s}))};
+  if(doc.sample) state.name="";
+  fillForm(); dirty=false; compute(); renderSelect();
+  setStatus(doc.sample? "Showing example numbers. Click New to start a property, or pick a saved one." : "");
+}
+function renderPortfolio(){
+  const ids=Object.keys(saved);
+  $("portfolio").hidden=!ids.length;
+  let tu=0,tt=0,tn=0;
+  const rows=ids.map(id=>({id,doc:saved[id],r:calc(saved[id])})).sort((a,b)=>(a.doc.name||"").localeCompare(b.doc.name||"")).map(({id,doc,r})=>{
+    if(r.ok){tu+=r.units;tt+=r.total;tn+=r.newLeases;}
+    return `<tr><td><a href="#" data-id="${id}">${(doc.name||"Untitled").replace(/</g,"&lt;")}</a></td><td class="n">${r.ok?int(r.units):"–"}</td><td class="n">${r.entered}/${FIELDS.length}</td><td class="n">${r.ok?int(r.newLeases):"–"}</td><td class="n">${r.ok?money(r.total):"–"}</td><td class="n">${r.ok?money(r.perUnit):"–"}</td></tr>`;
+  });
+  if(ids.length>1) rows.push(`<tr class="total"><td>Portfolio total</td><td class="n">${int(tu)}</td><td></td><td class="n">${int(tn)}</td><td class="n">${money(tt)}</td><td class="n">${tu?money(tt/tu):"–"}</td></tr>`);
+  $("portBody").innerHTML=rows.join("");
+  $("portBody").querySelectorAll("a[data-id]").forEach(a=>a.addEventListener("click",e=>{e.preventDefault(); askSwitch(a.dataset.id);}));
+}
+function askSwitch(id){
+  if(id===state.id) return;
+  const go=()=>{ if(id==="__sample") load(SAMPLE); else if(saved[id]) load({id, ...saved[id]}); };
+  if(dirty && state.id!=="__sample") confirmBar("You have unsaved changes. Switch anyway?","Switch", go, ()=>renderSelect());
+  else go();
+}
+function confirmBar(msg, yes, onYes, onNo){
+  const box=$("confirmBox"); box.hidden=false;
+  box.innerHTML=`<div class="confirm"><span>${msg}</span><button type="button" id="cYes">${yes}</button><button type="button" class="ghost" id="cNo">Cancel</button></div>`;
+  $("cYes").onclick=()=>{box.hidden=true; onYes();}; $("cNo").onclick=()=>{box.hidden=true; onNo&&onNo();};
+}
+$("propSel").addEventListener("change",e=>askSwitch(e.target.value));
+$("newBtn").addEventListener("click",()=>{
+  const go=()=>{ load({id:"new-"+Date.now().toString(36), name:"", values:{}, sources:[]}); setStatus("New property. Start with units and rent."); $("name").focus(); };
+  if(dirty && state.id!=="__sample") confirmBar("Discard unsaved changes and start a new property?","Start new",go); else go();
+});
+$("addSrc").addEventListener("click",()=>{ state.sources.push({name:"",monthly:""}); renderSources(); touch(); $("src-n-"+(state.sources.length-1)).focus(); });
+$("saveBtn").addEventListener("click", async ()=>{
+  if(!db) return;
+  if(!state.name.trim()){ setStatus("Add a property name before saving."); $("name").focus(); return; }
+  if(state.id==="__sample"||!state.id) state.id="p-"+Date.now().toString(36);
+  const body={name:state.name.trim(), values:{}, sources:state.sources.filter(s=>(s.name||"").trim()||num(s.monthly)!=null).map(s=>({name:(s.name||"").trim(), monthly:num(s.monthly)})), updatedAt:new Date().toISOString()};
+  for(const f of FIELDS){ const x=num(state.values[f.k]); if(x!=null) body.values[f.k]=x; }
+  $("saveBtn").disabled=true; setStatus("Saving…");
+  try{ await db.collection("properties").doc(state.id).set(body); saved[state.id]=body; dirty=false; setStatus("Saved "+body.name+"."); renderSelect(); renderPortfolio(); }
+  catch(e){ setStatus(e&&e.code==="quota_exceeded" ? "Storage is full. Delete a property and try again." : "Couldn’t save. Check your connection and try again."); }
+  finally{ $("saveBtn").disabled=!db; }
+});
+$("delBtn").addEventListener("click",()=>{
+  if(!db||!saved[state.id]) return;
+  const nm=saved[state.id].name;
+  confirmBar(`Delete ${nm.replace(/</g,"&lt;")}? This can’t be undone.`,"Delete", async ()=>{
+    try{ await db.collection("properties").doc(state.id).delete(); delete saved[state.id]; setStatus("Deleted "+nm+".");
+      const next=Object.keys(saved)[0]; load(next?{id:next,...saved[next]}:SAMPLE); renderPortfolio(); }
+    catch(e){ setStatus("Couldn’t delete. Try again."); }
+  });
+});
+$("copyBtn").addEventListener("click", async ()=>{
+  const r=calc(state); if(!r.ok){ setStatus("Enter units and rent first."); return; }
+  const lines=[`${state.name||"Property"}: recommended annual marketing budget ${money(r.total)} (${money(r.perUnit)} per unit, ${pct(r.gprPct)} of GPR)`,
+    `- Lead generation: ${money(r.leadGen)} (${int(r.newLeases)} new leases × ${money(r.cplTarget)})`,
+    `- Retention: ${money(r.retention)}`, `- Other: ${money(r.other)}`, `- Contingency: ${money(r.cont)}`,
+    `Leads needed: ${int(r.leads)} (${int(r.leads/12)}/month) at ${pct(r.get.ltl.x)} conversion`,
+    r.planned>0?`Current paid sources: ${money(r.planned)}/yr; budget with current sources ${money(r.plannedTotal)}`:null,
+    `Data points entered: ${r.entered} of ${FIELDS.length} (rest use benchmarks)`].filter(Boolean).join("\n");
+  try{ await navigator.clipboard.writeText(lines); setStatus("Summary copied."); }
+  catch(e){ setStatus("Copy isn’t available here. Select the numbers on the page instead."); }
+});
+
+// ---------- boot ----------
+buildForm(); load(SAMPLE);
+(async ()=>{
+  try{ db = window.claude && await window.claude.use("db"); }catch(e){ db=null; }
+  if(!db){ setStatus("Saving isn’t available in this view. The calculator still works; your entries won’t be kept."); renderSelect(); return; }
+  renderSelect();
+  db.collection("properties").onSnapshot(snap=>{
+    saved={}; snap.docs.forEach(d=>{ if(d.exists) saved[d.id]=d.data(); });
+    if(state.id==="__sample" && !dirty){ const first=Object.keys(saved).sort((a,b)=>(saved[a].name||"").localeCompare(saved[b].name||""))[0]; if(first){ load({id:first,...saved[first]}); } }
+    renderSelect(); renderPortfolio();
+  }, ()=>setStatus("Lost connection to saved properties. Reload to try again."));
+})();
+})();
+</script>
