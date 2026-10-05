@@ -48,8 +48,7 @@ def put(rows,r):
     return r
 r=put(rows,r); r+=1
 section(ws,r,"Lease expirations & retention",7); r+=1
-r=put([("exp","% of occupied leases expiring in 2027",0.85,PCT,"%","ACTUAL proxy: WAR T-12 expirations + MTM 130 ÷ 153 occupied"),
-("ren","Renewal rate (of expiring leases)",0.685,PCT,"%","ACTUAL: WAR T-12 renewal rate 68.5% (T-3 is 82.1%)"),
+r=put([("ren","Renewal rate (of expiring leases)",0.685,PCT,"%","ACTUAL: WAR T-12 renewal rate 68.5% (T-3 is 82.1%)"),
 ("et","Early terminations / lease breaks (% of units per year)",0.102,PCT,"%","ACTUAL: WAR T-12 lease breaks 17 ÷ 166 homes"),
 ("ri","Renewal incentive per renewal",100,CUR,"$","PLACEHOLDER: gift card / upgrade offered to renew; enter 0 if none"),],r); r+=1
 section(ws,r,"Leasing funnel (conversion rates)",7); r+=1
@@ -69,19 +68,26 @@ section(ws,r,"Budget guardrails",7); r+=1
 r=put([("cont","Contingency / reserve",0.10,PCT,"%","Cushion for slow months, price hikes, surprise vacancies"),
 ("cap","Target max cost per lease (% of one month's rent)",0.50,PCT,"%","Common rule of thumb: keep acquisition cost under ~½ month's rent"),],r); r+=1
 
-# Seasonality
-section(ws,r,"Lease expiration seasonality (% of 2027 expirations by month)",7); r+=1
-hdr(ws,r,["Month","% of expirations","","","","","Notes"]); r+=1
+# Expiration schedule
+section(ws,r,"2027 lease expiration schedule (count by month)",7); r+=1
+hdr(ws,r,["Month","Expirations","Target expirations (memo)","Status","% of 2027","","Notes"]); r+=1
 months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-season=[.05,.05,.07,.09,.11,.13,.13,.11,.08,.07,.06,.05]
+expc=[12,9,12,18,15,12,16,10,18,11,10,10]
+tgt=[12,14,16,16,17,15,17,14,12,11,10,10]
 s0=r
-for m,v in zip(months,season):
-    ws.cell(r,1,m).font=BLK; inp(ws.cell(r,2),v,PCT); r+=1
-ws.cell(s0,7,"PLACEHOLDER curve (summer-heavy). Replace with actual 2027 expiration counts by month.").font=Font(name=F,italic=True,color="595959")
-ws.cell(r,1,"Total (must = 100%)").font=B
-ws.cell(r,2,f"=SUM(B{s0}:B{r-1})").number_format=PCT; ws.cell(r,2).font=B
-ws.cell(r,3,f'=IF(ROUND(B{r},4)=1,"OK","CHECK")').font=B
-R["seas0"]=s0; R["seasChk"]=f"Inputs!$C${r}"; r+=2
+for i,(m,v,t) in enumerate(zip(months,expc,tgt)):
+    ws.cell(r,1,m).font=BLK; inp(ws.cell(r,2),v,NUM); inp(ws.cell(r,3),t,NUM,key=False)
+    ws.cell(r,4,"Booked" if i<9 else "Estimated").font=BLUE
+    ws.cell(r,5,f"=IFERROR(B{r}/B{s0+12},0)").number_format=PCT; r+=1
+ws.cell(s0,7,"Jan–Sep ACTUAL: leases already expiring, from WAR 10/4/26 Lease Expiration Schedule (page 3).").font=Font(name=F,italic=True,color="595959")
+ws.cell(s0+9,7,"Oct–Nov ESTIMATE = WAR target expirations (no leases booked yet). Dec ESTIMATE uses Dec 2026's target of 10.").font=Font(name=F,italic=True,color="595959")
+ws.cell(s0+3,7,"Apr and Sep run over target (18 vs 16 and 18 vs 12): steer renewal terms toward Oct–Feb to even this out.").font=Font(name=F,italic=True,color="595959")
+ws.cell(r,1,"Total 2027 expirations").font=B
+ws.cell(r,2,f"=SUM(B{s0}:B{r-1})").number_format=NUM; ws.cell(r,2).font=B
+ws.cell(r,3,f"=SUM(C{s0}:C{r-1})").number_format=NUM; ws.cell(r,3).font=B
+ws.cell(r,5,f"=SUM(E{s0}:E{r-1})").number_format=PCT; ws.cell(r,5).font=B
+ws.cell(r,7,"Not shown on the chart: 2 month-to-month leases, which can give notice any time").font=Font(name=F,italic=True,color="595959")
+R["seas0"]=s0; r+=2
 
 # Channels
 section(ws,r,"Lead channels (2027 lease mix and channel conversion)",10); r+=1
@@ -153,9 +159,7 @@ def sec(t):
     for c in range(1,15): mp.cell(row,c).fill=SEC
     mp.cell(row,1,t).font=B; row+=1
 sec("Lease demand")
-expiring=f"({R['units']}*{R['occ']}*{R['exp']})"
-line("sea","Expiration seasonality",lambda i:f"=Inputs!$B${R['seas0']+i}",PCT,font=GRN)
-line("exp","Leases expiring",lambda i:f"={expiring}*{MC(i)}{P['sea']}")
+line("exp","Leases expiring",lambda i:f"=Inputs!$B${R['seas0']+i}",NUM1,font=GRN)
 line("ren","Renewals",lambda i:f"={MC(i)}{P['exp']}*{R['ren']}")
 line("mo","Move-outs at expiration",lambda i:f"={MC(i)}{P['exp']}-{MC(i)}{P['ren']}")
 line("et","Early terminations / skips",lambda i:f"={R['units']}*{R['et']}/12")
@@ -253,29 +257,27 @@ sm.cell(r,2,f"=SUM(B{b0}:B{r-1})").number_format=CUR; sm.cell(r,2).font=B
 sm.cell(r,5,f"=SUM(E{b0}:E{r-1})").number_format=PCT; sm.cell(r,5).font=B
 for c in range(1,9): sm.cell(r,c).border=TOP
 r+=2; section(sm,r,"Input checks",5); r+=1
-sm.cell(r,1,"Seasonality sums to 100%").font=BLK; sm.cell(r,2,"="+R["seasChk"]).font=GRN; r+=1
 sm.cell(r,1,"Channel lease mix sums to 100%").font=BLK; sm.cell(r,2,"="+R["chChk"]).font=GRN; r+=1
 
 # ---------------- Read Me ----------------
 rm=wb.create_sheet("Read Me")
 rm.column_dimensions["A"].width=110
 lines=[("How this model works",H),
-("Lease demand drives the budget: Units × occupancy × % expiring → renewals vs. move-outs → new leases needed → ÷ lead-to-lease rate → leads needed → × cost per lead by channel → + fixed costs → + contingency.",BLK),
+("Lease demand drives the budget: 2027 lease expirations by month → renewals vs. move-outs → new leases needed → ÷ lead-to-lease rate → leads needed → × cost per lead by channel → + fixed costs → + contingency.",BLK),
 ("",BLK),("Tabs",B),
 ("Budget Summary: headline budget, $/unit, cost per lease, vacancy-cost justification, line items vs. 2026.",BLK),
-("Inputs: the ONLY tab you edit. Property facts, retention, funnel, seasonality, channels, fixed costs.",BLK),
+("Inputs: the ONLY tab you edit. Property facts, retention, funnel, expiration schedule, channels, fixed costs.",BLK),
 ("Monthly Plan: month-by-month leases, leads and spend, so you can see the summer peak and pace spend.",BLK),
 ("",BLK),("Color legend",B),
 ("Blue text on yellow = input you can change · Black = formula · Green = pulled from another tab.",BLK),
 ("",BLK),("Status of the numbers",B),
-("ACTUAL = from the Haven Homes property list or the Weekly Activity Report (WAR) week ending 10/4/2026, mostly trailing-12-month (T-12) figures. PLACEHOLDER = starting value still to be replaced: mainly channel costs, fixed costs and 2027 expiration timing.",BLK),
+("ACTUAL = from the Haven Homes property list or the Weekly Activity Report (WAR) week ending 10/4/2026, mostly trailing-12-month (T-12) figures. PLACEHOLDER = starting value still to be replaced: mainly fixed/program costs and Oct–Dec 2027 expirations (estimated from targets).",BLK),
 ("",BLK),("Data to pull for Harrison Landing (replace placeholders)",B),
 ("Done from the WAR: rent, occupancy, renewal rate, lease breaks, funnel, lead sources, days vacant.",BLK),
-("1. Lease expiration report: count of 2027 expirations by month (replaces the placeholder seasonality curve).",BLK),
 ("Done from the 2026 Ad Spend Tracking sheet: Digible, Zillow, CoStar (cancelled 9/30/26), AptGeo and website spend.",BLK),
-("2. 2027 price changes from Digible and Zillow; whether Rently, MLS or Apartment List are billed somewhere else.",BLK),
-("3. Digible's lead and lease attribution report (WAR may credit their ads to Property Website).",BLK),
-("4. Fixed-cost items: CRM, AI leasing, reputation, website, photography, signage, events.",BLK),
+("1. 2027 price changes from Digible and Zillow; whether Rently, MLS or Apartment List are billed somewhere else.",BLK),
+("2. Digible's lead and lease attribution report (WAR may credit their ads to Property Website).",BLK),
+("3. Fixed-cost items: CRM, AI leasing, reputation, website, photography, signage, events.",BLK),
 ("",BLK),("Rolling out to the portfolio",B),
 ("Copy this workbook once per property (or duplicate the Inputs tab) and change the Inputs. Prosper 207 is in lease-up and needs a separate lease-up model (absorption pace, not turnover).",BLK),]
 for i,(t,f) in enumerate(lines,1):
