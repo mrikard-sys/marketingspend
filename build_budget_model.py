@@ -92,15 +92,14 @@ R["seas0"]=s0; r+=2
 # Channels
 section(ws,r,"Lead channels (2027 lease mix and channel conversion)",10); r+=1
 hdr(ws,r,["Channel","% of 2027 new leases","Channel lead-to-lease","Cost per lead ($)","Fixed monthly fee ($)","Cost per signed lease ($)","2026 actual spend ($)","T-12 leads (memo)","T-12 leases (memo)","Notes"]); r+=1
-ch=[("Zillow",0.268,0.022,0,958,0,11244,634,14,"Mix/conv ACTUAL (WAR T-12). Fee ACTUAL: $958/mo since Oct 2026 (was $930). Mix includes Apts.com's former share"),
+ch=[("Zillow",0.268,0.022,0,958,0,11244,634,14,"Mix/conv ACTUAL (WAR T-12). Fee ACTUAL: $958/mo is the 2027 rate (updated Oct 2026). Mix includes Apts.com's former share"),
 ("Property website",0.232,0.057,0,0,0,0,228,13,"ACTUAL. $0 on ad tracker; hosting is in fixed costs. Digible ads may land here"),
-("MLS",0.161,0.049,0,0,0,None,183,9,"ACTUAL mix/conv. Not on ad tracker: any MLS / agent fees?"),
+("MLS",0.161,0.049,0,1000,0,None,183,9,"Mix/conv ACTUAL (WAR T-12). Fee ACTUAL: $1,000/mo for one listing (fixed, per user)"),
 ("Google (organic / Business Profile)",0.107,0.128,0,0,0,None,47,6,"ACTUAL mix/conv. Best converting source, $0 cost"),
-("Rently (self-tour listings)",0.107,0.033,0,0,0,None,184,6,"ACTUAL mix/conv. Not on ad tracker: confirm if billed elsewhere"),
+("Rently (self-tour listings)",0.107,0.033,0,0,0,None,184,6,"ACTUAL mix/conv. Cost excluded from this budget (per user)"),
 ("Digible (PPC / paid digital)",0.054,0.029,0,2295,0,27540,103,3,"Fee ACTUAL: $2,295/mo. WAR credits PPC with only 3 leases; get Digible's attribution report"),
 ("Apartments.com / CoStar",0.0,0.008,0,0,0,15174,120,1,"Cancelled: last invoice 9/30/26. 2026: $15,174 for 1 lease. Enter a fee and mix here if renewed"),
-("Apartment List",0.018,0.083,0,0,0,None,12,1,"ACTUAL mix/conv. Not on ad tracker; enter pay-per-lease fee if charged"),
-("All other / unknown",0.053,0.042,0,0,0,None,71,3,"ACTUAL: sister community, RentCafe, walk-in, unknown, etc. (AptGeo $0 in 2026)"),]
+("All other / unknown",0.071,0.048,0,0,0,None,83,4,"ACTUAL: Apartment List, sister community, RentCafe, walk-in, unknown, etc. (AptGeo $0 in 2026)"),]
 c0=r
 for name,sh,cv,cpl,fx,cpls,act,tl,tls,note in ch:
     ws.cell(r,1,name).font=BLUE; ws.cell(r,1).fill=YEL
@@ -119,7 +118,7 @@ r+=3
 # Fixed costs
 section(ws,r,"Fixed & program costs (property-level)",7); r+=1
 hdr(ws,r,["Item","Monthly ($)","One-time / annual ($)","","","","Notes"]); r+=1
-fx=[("CRM / lead management (allocated)",250,0,"PLACEHOLDER: e.g. ~$1.50/unit/mo"),
+fx=[
 ("AI leasing assistant / chat",166,0,"PLACEHOLDER: e.g. ~$1/unit/mo"),
 ("Reputation management / review software",150,0,"PLACEHOLDER"),
 ("Website hosting & maintenance",100,0,"PLACEHOLDER"),
@@ -273,11 +272,11 @@ lines=[("How this model works",H),
 ("",BLK),("Status of the numbers",B),
 ("ACTUAL = from the Haven Homes property list or the Weekly Activity Report (WAR) week ending 10/4/2026, mostly trailing-12-month (T-12) figures. PLACEHOLDER = starting value still to be replaced: mainly fixed/program costs and Oct–Dec 2027 expirations (estimated from targets).",BLK),
 ("",BLK),("Data to pull for Harrison Landing (replace placeholders)",B),
+("Excluded per user: Rently and CRM costs. Apartment List folded into All other.",BLK),
 ("Done from the WAR: rent, occupancy, renewal rate, lease breaks, funnel, lead sources, days vacant.",BLK),
 ("Done from the 2026 Ad Spend Tracking sheet: Digible, Zillow, CoStar (cancelled 9/30/26), AptGeo and website spend.",BLK),
-("1. 2027 price changes from Digible and Zillow; whether Rently, MLS or Apartment List are billed somewhere else.",BLK),
-("2. Digible's lead and lease attribution report (WAR may credit their ads to Property Website).",BLK),
-("3. Fixed-cost items: CRM, AI leasing, reputation, website, photography, signage, events.",BLK),
+("1. Digible's lead and lease attribution report (WAR may credit their ads to Property Website).",BLK),
+("2. Fixed-cost items: AI leasing, reputation, website, photography, signage, events.",BLK),
 ("",BLK),("Rolling out to the portfolio",B),
 ("Copy this workbook once per property (or duplicate the Inputs tab) and change the Inputs. Prosper 207 is in lease-up and needs a separate lease-up model (absorption pace, not turnover).",BLK),]
 for i,(t,f) in enumerate(lines,1):
