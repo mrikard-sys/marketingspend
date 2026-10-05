@@ -26,7 +26,7 @@ def inp(c,v,fmt=None,key=True):
 ws=wb.active; ws.title="Inputs"
 ws["A1"]="2027 Marketing Budget Model: Inputs"; ws["A1"].font=H
 ws["A2"]="Yellow cells with blue text are inputs. Change them and every other tab recalculates."; ws["A2"].font=Font(name=F,italic=True)
-for col,w in zip("ABCDEFG",[44,16,14,16,16,16,60]): ws.column_dimensions[col].width=w
+for col,w in zip("ABCDEFGHIJ",[44,16,16,14,16,16,16,13,13,60]): ws.column_dimensions[col].width=w
 R={}
 r=4; section(ws,r,"Property profile",7); r+=1
 rows=[("name","Property name","Harrison Landing",None,"","From Property List (Haven Homes)"),
@@ -34,10 +34,10 @@ rows=[("name","Property name","Harrison Landing",None,"","From Property List (Ha
 ("loc","Location","Simpsonville, SC (Greenville Co.)",None,"","From Property List"),
 ("type","Property type / ownership","Townhome / Owned-Managed",None,"",""),
 ("units","Total units",166,NUM,"units","From Property List"),
-("rent","Average monthly rent",2100,CUR,"$/mo","PLACEHOLDER: replace with rent roll average"),
-("occ","Current occupancy",0.95,PCT,"%","PLACEHOLDER: current physical occupancy from PMS"),
-("tocc","Target occupancy (end of 2027)",0.96,PCT,"%","PLACEHOLDER: owner/asset mgmt target"),
-("dv","Average days vacant per turn",30,NUM,"days","PLACEHOLDER: move-out to move-in, from PMS turn report"),]
+("rent","Average monthly rent (current asking)",1821,CUR,"$/mo","ACTUAL: WAR 10/4/26 avg base asking rent (in-place avg $1,832)"),
+("occ","Current occupancy",0.922,PCT,"%","ACTUAL: WAR 10/4/26 physical occupancy 153/166. Note 90-day forecast is 86.1% with no new leases"),
+("tocc","Target occupancy (end of 2027)",0.97,PCT,"%","WAR uses 97% as its traffic-needed target; confirm with asset management"),
+("dv","Average days vacant per turn",79,NUM,"days","ACTUAL: WAR T-12 avg days vacant (turn takes 21 days; the rest is time sitting rent-ready)"),]
 def put(rows,r):
     for k,lab,v,fmt,unit,note in rows:
         ws.cell(r,1,lab).font=BLK
@@ -48,19 +48,22 @@ def put(rows,r):
     return r
 r=put(rows,r); r+=1
 section(ws,r,"Lease expirations & retention",7); r+=1
-r=put([("exp","% of occupied leases expiring in 2027",0.95,PCT,"%","PLACEHOLDER: count 2027 expirations in lease expiration report ÷ occupied units"),
-("ren","Renewal rate (of expiring leases)",0.55,PCT,"%","PLACEHOLDER: 2026 YTD renewals ÷ expirations"),
-("et","Early terminations / skips (% of units per year)",0.03,PCT,"%","PLACEHOLDER: breaks, skips, evictions, transfers out"),
+r=put([("exp","% of occupied leases expiring in 2027",0.85,PCT,"%","ACTUAL proxy: WAR T-12 expirations + MTM 130 ÷ 153 occupied"),
+("ren","Renewal rate (of expiring leases)",0.685,PCT,"%","ACTUAL: WAR T-12 renewal rate 68.5% (T-3 is 82.1%)"),
+("et","Early terminations / lease breaks (% of units per year)",0.102,PCT,"%","ACTUAL: WAR T-12 lease breaks 17 ÷ 166 homes"),
 ("ri","Renewal incentive per renewal",100,CUR,"$","PLACEHOLDER: gift card / upgrade offered to renew; enter 0 if none"),],r); r+=1
 section(ws,r,"Leasing funnel (conversion rates)",7); r+=1
-r=put([("c1","Lead → tour",0.25,PCT,"%","PLACEHOLDER: pull from CRM funnel report"),
-("c2","Tour → application",0.35,PCT,"%","PLACEHOLDER: includes self-guided tours"),
-("c3","Application → approval",0.70,PCT,"%","PLACEHOLDER: screening approval rate"),
-("c4","Approval → signed lease",0.90,PCT,"%","PLACEHOLDER: approved applicants who sign"),],r)
-ws.cell(r,1,"Lead-to-lease rate (calculated)").font=B
+r=put([("c1","Lead → tour",0.247,PCT,"%","ACTUAL: WAR T-12 390 tours ÷ 1,582 traffic"),
+("c2","Tour → application",0.254,PCT,"%","ACTUAL: WAR T-12 99 apps ÷ 390 tours (about half of apps came without a tour)"),
+("c3","Application → approval",0.556,PCT,"%","ACTUAL: WAR T-12 55 approved ÷ 99 apps (25 denied, 25 canceled)"),
+("c4","Approval → signed lease",1.0,PCT,"%","ACTUAL: WAR T-12 56 leases vs 55 approvals; treated as 100%"),],r)
+ws.cell(r,1,"Overall lead-to-lease rate (calculated)").font=B
 ws.cell(r,2,f"={R['c1']}*{R['c2']}*{R['c3']}*{R['c4']}").number_format=PCT; ws.cell(r,2).font=B
-ws.cell(r,7,"Industry range is often ~3–8%; your real number matters most").font=Font(name=F,italic=True,color="595959")
-R["ltl"]=f"Inputs!$B${r}"; r+=2
+ws.cell(r,7,"WAR T-12 reports 3.5% (56 leases ÷ 1,582 traffic). Leads in this model come from per-channel rates below.").font=Font(name=F,italic=True,color="595959")
+R["ltl"]=f"Inputs!$B${r}"; r+=1
+r=put([("t3","Recent (T-3) lead-to-lease rate, for stress test",0.013,PCT,"%","ACTUAL: WAR T-3 conversion 1.3% (229 traffic, only 6 apps). Used only in the Summary stress test"),],r); r+=1
+section(ws,r,"Concessions (memo only, not in the marketing budget)",7); r+=1
+r=put([("cw","Weeks free offered per new lease",6,NUM,"weeks","ACTUAL: WAR 10/4/26 current special is 6 weeks free + waived L&L admin"),],r); r+=1
 section(ws,r,"Budget guardrails",7); r+=1
 r=put([("cont","Contingency / reserve",0.10,PCT,"%","Cushion for slow months, price hikes, surprise vacancies"),
 ("cap","Target max cost per lease (% of one month's rent)",0.50,PCT,"%","Common rule of thumb: keep acquisition cost under ~½ month's rent"),],r); r+=1
@@ -80,27 +83,30 @@ ws.cell(r,3,f'=IF(ROUND(B{r},4)=1,"OK","CHECK")').font=B
 R["seas0"]=s0; R["seasChk"]=f"Inputs!$C${r}"; r+=2
 
 # Channels
-section(ws,r,"Lead channels",7); r+=1
-hdr(ws,r,["Channel","% of leads","Cost per lead ($)","Fixed monthly fee ($)","Cost per signed lease ($)","2026 actual spend ($)","Notes"]); r+=1
-ch=[("Zillow Rentals",0.30,25,0,0,"PLACEHOLDER: check your Zillow contract (per-lead vs. flat)"),
-("Apartments.com / CoStar network",0.20,0,1200,0,"PLACEHOLDER: flat package; confirm 2027 renewal price"),
-("Google paid search",0.15,35,0,0,"PLACEHOLDER: brand + 'townhomes for rent Simpsonville'"),
-("Paid social (Meta)",0.10,20,0,0,"PLACEHOLDER"),
-("Website / SEO (organic)",0.10,0,0,0,"Website cost lives in fixed costs below"),
-("Resident referrals",0.05,0,0,300,"PLACEHOLDER: referral bonus paid per signed lease"),
-("Signage / drive-by / walk-in",0.10,0,0,0,"Signage cost lives in fixed costs below"),]
+section(ws,r,"Lead channels (2027 lease mix and channel conversion)",10); r+=1
+hdr(ws,r,["Channel","% of 2027 new leases","Channel lead-to-lease","Cost per lead ($)","Fixed monthly fee ($)","Cost per signed lease ($)","2026 actual spend ($)","T-12 leads (memo)","T-12 leases (memo)","Notes"]); r+=1
+ch=[("Zillow",0.25,0.022,25,0,0,634,14,"Mix & conversion ACTUAL (WAR T-12). Cost PLACEHOLDER: confirm Zillow pricing"),
+("Property website",0.232,0.057,0,0,0,228,13,"ACTUAL mix/conv. Site cost is in fixed costs"),
+("MLS",0.161,0.049,0,0,0,183,9,"ACTUAL mix/conv. Cost PLACEHOLDER: any MLS / agent fees?"),
+("Google (organic / Business Profile)",0.107,0.128,0,0,0,47,6,"ACTUAL mix/conv. Best converting source"),
+("Rently (self-tour listings)",0.107,0.033,0,150,0,184,6,"ACTUAL mix/conv. Fee PLACEHOLDER"),
+("PPC (paid search)",0.054,0.029,35,0,0,103,3,"ACTUAL mix/conv. CPL PLACEHOLDER"),
+("Apartments.com / CoStar",0.018,0.008,0,1200,0,120,1,"ACTUAL mix/conv: 1 lease from 120 leads. Fee PLACEHOLDER: review before renewing"),
+("Apartment List",0.018,0.083,0,0,350,12,1,"ACTUAL mix/conv. Pay-per-lease fee PLACEHOLDER"),
+("All other / unknown",0.053,0.042,0,0,0,71,3,"ACTUAL: sister community, RentCafe, walk-in, unknown, etc."),]
 c0=r
-for name,sh,cpl,fx,cpls,note in ch:
+for name,sh,cv,cpl,fx,cpls,tl,tls,note in ch:
     ws.cell(r,1,name).font=BLUE; ws.cell(r,1).fill=YEL
-    inp(ws.cell(r,2),sh,PCT); inp(ws.cell(r,3),cpl,CUR); inp(ws.cell(r,4),fx,CUR); inp(ws.cell(r,5),cpls,CUR)
-    inp(ws.cell(r,6),None,CUR)
-    ws.cell(r,7,note).font=Font(name=F,italic=True,color="595959"); r+=1
+    inp(ws.cell(r,2),sh,PCT); inp(ws.cell(r,3),cv,PCT); inp(ws.cell(r,4),cpl,CUR); inp(ws.cell(r,5),fx,CUR); inp(ws.cell(r,6),cpls,CUR)
+    inp(ws.cell(r,7),None,CUR); inp(ws.cell(r,8),tl,NUM,key=False); inp(ws.cell(r,9),tls,NUM,key=False)
+    ws.cell(r,10,note).font=Font(name=F,italic=True,color="595959"); r+=1
 c1=r-1
-ws.cell(r,1,"Total (must = 100%)").font=B
+ws.cell(r,1,"Total (lease mix must = 100%)").font=B
 ws.cell(r,2,f"=SUM(B{c0}:B{c1})").number_format=PCT; ws.cell(r,2).font=B
 ws.cell(r,3,f'=IF(ROUND(B{r},4)=1,"OK","CHECK")').font=B
+ws.cell(r,8,f"=SUM(H{c0}:H{c1})").number_format=NUM; ws.cell(r,9,f"=SUM(I{c0}:I{c1})").number_format=NUM
 R["chChk"]=f"Inputs!$C${r}"
-ws.cell(r+1,1,"Leave 2026 actual blank if unknown; the Summary tab will skip the variance.").font=Font(name=F,italic=True,color="595959")
+ws.cell(r+1,1,"Leads per channel = leases from that channel ÷ its lead-to-lease rate. Shift the lease mix toward channels that convert to cut spend. Leave 2026 actual blank if unknown.").font=Font(name=F,italic=True,color="595959")
 r+=3
 
 # Fixed costs
@@ -127,7 +133,7 @@ ws.freeze_panes="A4"
 # ---------------- Monthly Plan ----------------
 mp=wb.create_sheet("Monthly Plan")
 mp["A1"]="=\"2027 Monthly Lease Demand & Spend: \"&"+R["name"]; mp["A1"].font=H
-mp["A2"]="All cells are formulas driven by the Inputs tab. Assumes leads are generated in the same month as the lease need."; mp["A2"].font=Font(name=F,italic=True)
+mp["A2"]="All cells are formulas driven by the Inputs tab. Assumes leads arrive in the same month as the lease need (WAR: traffic to move-in averages ~36 days, so start each push a month early)."; mp["A2"].font=Font(name=F,italic=True)
 mp.column_dimensions["A"].width=42
 for i in range(2,15): mp.column_dimensions[L(i)].width=11
 hdr(mp,4,["Line item"]+months+["2027 Total"])
@@ -154,15 +160,20 @@ line("mo","Move-outs at expiration",lambda i:f"={MC(i)}{P['exp']}-{MC(i)}{P['ren
 line("et","Early terminations / skips",lambda i:f"={R['units']}*{R['et']}/12")
 line("gap","Leases to reach target occupancy",lambda i:f"=MAX(0,{R['units']}*({R['tocc']}-{R['occ']}))/12")
 line("lz","New leases needed",lambda i:f"={MC(i)}{P['mo']}+{MC(i)}{P['et']}+{MC(i)}{P['gap']}",bold=True)
+sec("Leads needed by channel")
+ldrows=[]
+for k in range(c0,c1+1):
+    line(f"ld{k}",f"=Inputs!$A${k}",lambda i,k=k:f"=IFERROR({MC(i)}{P['lz']}*Inputs!$B${k}/Inputs!$C${k},0)",NUM1)
+    mp.cell(P[f"ld{k}"],1).font=GRN; ldrows.append(P[f"ld{k}"])
+line("leads","Total leads needed",lambda i:f"=SUM({MC(i)}{ldrows[0]}:{MC(i)}{ldrows[-1]})",NUM,bold=True)
 sec("Funnel targets")
-line("leads","Leads needed",lambda i:f"=IFERROR({MC(i)}{P['lz']}/{R['ltl']},0)",NUM,bold=True)
 line("tours","Tours needed",lambda i:f"={MC(i)}{P['leads']}*{R['c1']}",NUM)
 line("apps","Applications needed",lambda i:f"={MC(i)}{P['tours']}*{R['c2']}",NUM)
 sec("Spend by lead channel ($)")
 chrows=[]
 for k in range(c0,c1+1):
-    line(f"ch{k}",f"=Inputs!$A${k}",lambda i,k=k:(f"=Inputs!$D${k}+{MC(i)}{P['leads']}*Inputs!$B${k}*Inputs!$C${k}"
-        f"+{MC(i)}{P['lz']}*Inputs!$B${k}*Inputs!$E${k}"),CUR)
+    line(f"ch{k}",f"=Inputs!$A${k}",lambda i,k=k:(f"=Inputs!$E${k}+{MC(i)}{P[f'ld{k}']}*Inputs!$D${k}"
+        f"+{MC(i)}{P['lz']}*Inputs!$B${k}*Inputs!$F${k}"),CUR)
     mp.cell(P[f"ch{k}"],1).font=GRN; chrows.append(P[f"ch{k}"])
 line("chsub","Channel subtotal",lambda i:f"=SUM({MC(i)}{chrows[0]}:{MC(i)}{chrows[-1]})",CUR,bold=True)
 sec("Fixed, program & retention costs ($)")
@@ -181,7 +192,7 @@ mp.freeze_panes="B5"
 
 # ---------------- Budget Summary ----------------
 sm=wb.create_sheet("Budget Summary",0)
-sm.column_dimensions["A"].width=46; sm.column_dimensions["B"].width=18; sm.column_dimensions["C"].width=18; sm.column_dimensions["D"].width=18; sm.column_dimensions["E"].width=50
+sm.column_dimensions["A"].width=46; sm.column_dimensions["B"].width=18; sm.column_dimensions["C"].width=18; sm.column_dimensions["D"].width=18; sm.column_dimensions["E"].width=50; sm.column_dimensions["F"].width=12; sm.column_dimensions["G"].width=12; sm.column_dimensions["H"].width=16
 sm["A1"]="=\"2027 Marketing Budget: \"&"+R["name"]; sm["A1"].font=H
 sm["A2"]="="+R["port"]+"&\" · \"&"+R["loc"]+"&\" · \"&TEXT("+R["units"]+",\"0\")&\" units\""; sm["A2"].font=Font(name=F,italic=True)
 T=lambda k:f"='Monthly Plan'!$N${P[k]}"
@@ -202,7 +213,7 @@ srow("ren","Renewals",T("ren"),NUM)
 srow("turns","Move-outs (expirations + early terminations)",f"='Monthly Plan'!$N${P['mo']}+'Monthly Plan'!$N${P['et']}",NUM)
 srow("tr","Implied annual turnover rate",f"=IFERROR({S['turns']}/{R['units']},0)",PCT,"Move-outs ÷ total units")
 srow("lz","New leases needed",T("lz"),NUM,bold=True)
-srow("ltl","Lead-to-lease rate",f"={R['ltl']}",PCT)
+srow("ltl","Blended lead-to-lease rate (channel mix)",f"=IFERROR(B{r-1}/'Monthly Plan'!$N${P['leads']},0)",PCT,"New leases ÷ leads")
 srow("leads","Leads needed",T("leads"),NUM,bold=True)
 srow("tours","Tours needed",T("tours"),NUM)
 r+=1; section(sm,r,"Efficiency checks",5); r+=1
@@ -210,20 +221,26 @@ srow("cpl","Blended cost per lead",f"=IFERROR('Monthly Plan'!$N${P['chsub']}/{S[
 srow("cpls","Cost per new lease (all-in)",f"=IFERROR({S['tot']}/{S['lz']},0)",CUR,"Total budget ÷ new leases")
 srow("cplr","Cost per lease as % of one month's rent",f"=IFERROR({S['cpls']}/{R['rent']},0)",PCT)
 srow("capchk","Within cost-per-lease target?",f"=IF({S['cplr']}<={R['cap']},\"YES\",\"OVER TARGET\")","General",bold=True)
+srow("t3l","Stress test: leads needed at T-3 conversion",f"=IFERROR({S['lz']}/{R['t3']},0)",NUM,"If the recent 1.3% conversion continues")
+srow("t3c","Stress test: extra per-lead spend at T-3 conversion",f"=MAX(0,({S['t3l']}-{S['leads']})*{S['cpl']})",CUR,"Extra leads × blended cost per lead. Fixing conversion is cheaper")
 r+=1; section(sm,r,"Why it pays: cost of vacancy",5); r+=1
 srow("vl","Projected 2027 vacancy loss from turns",f"={S['turns']}*{R['dv']}*{R['rent']}/30",CUR,"Move-outs × days vacant × daily rent")
 srow("v1","Value of cutting 1 vacant day per turn",f"={S['turns']}*{R['rent']}/30",CUR,"Use this to justify spend that speeds up leasing")
+srow("cm","Concession cost on new leases (memo)",f"={S['lz']}*{R['cw']}*{R['rent']}*12/52",CUR,"Not in marketing budget. Weeks free × weekly rent × new leases")
 srow("rv","Value of +5 pts renewal rate",f"={S['exp']}*0.05*({R['dv']}*{R['rent']}/30+IFERROR({S['cpls']},0))",CUR,"Avoided vacancy + avoided acquisition cost")
 r+=1; section(sm,r,"Budget by line item",5); r+=1
-hdr(sm,r,["Line item","2027 Budget ($)","2026 Actual ($)","Variance ($)","Share of budget"]); r+=1
+hdr(sm,r,["Line item","2027 Budget ($)","2026 Actual ($)","Variance ($)","Share of budget","2027 leads","2027 leases","Cost per lease ($)"]); r+=1
 b0=r
 for k in range(c0,c1+1):
     pr=P[f"ch{k}"]
     sm.cell(r,1,f"=Inputs!$A${k}").font=GRN
     sm.cell(r,2,f"='Monthly Plan'!$N${pr}").number_format=CUR; sm.cell(r,2).font=GRN
-    sm.cell(r,3,f'=IF(Inputs!$F${k}="","",Inputs!$F${k})').number_format=CUR; sm.cell(r,3).font=GRN
+    sm.cell(r,3,f'=IF(Inputs!$G${k}="","",Inputs!$G${k})').number_format=CUR; sm.cell(r,3).font=GRN
     sm.cell(r,4,f'=IF(C{r}="","",B{r}-C{r})').number_format=CUR
-    sm.cell(r,5,f"=IFERROR(B{r}/{S['tot']},0)").number_format=PCT; r+=1
+    sm.cell(r,5,f"=IFERROR(B{r}/{S['tot']},0)").number_format=PCT
+    sm.cell(r,6,f"='Monthly Plan'!$N${P[f'ld{k}']}").number_format=NUM; sm.cell(r,6).font=GRN
+    sm.cell(r,7,f"={S['lz']}*Inputs!$B${k}").number_format=NUM1; sm.cell(r,7).font=GRN
+    sm.cell(r,8,f"=IFERROR(B{r}/G{r},0)").number_format=CUR; r+=1
 for label,k in [("Fixed, program & retention costs","fxsub"),("Contingency","cont")]:
     sm.cell(r,1,label).font=BLK
     sm.cell(r,2,T(k)).number_format=CUR; sm.cell(r,2).font=GRN
@@ -231,10 +248,10 @@ for label,k in [("Fixed, program & retention costs","fxsub"),("Contingency","con
 sm.cell(r,1,"Total").font=B
 sm.cell(r,2,f"=SUM(B{b0}:B{r-1})").number_format=CUR; sm.cell(r,2).font=B
 sm.cell(r,5,f"=SUM(E{b0}:E{r-1})").number_format=PCT; sm.cell(r,5).font=B
-for c in range(1,6): sm.cell(r,c).border=TOP
+for c in range(1,9): sm.cell(r,c).border=TOP
 r+=2; section(sm,r,"Input checks",5); r+=1
 sm.cell(r,1,"Seasonality sums to 100%").font=BLK; sm.cell(r,2,"="+R["seasChk"]).font=GRN; r+=1
-sm.cell(r,1,"Channel lead mix sums to 100%").font=BLK; sm.cell(r,2,"="+R["chChk"]).font=GRN; r+=1
+sm.cell(r,1,"Channel lease mix sums to 100%").font=BLK; sm.cell(r,2,"="+R["chChk"]).font=GRN; r+=1
 
 # ---------------- Read Me ----------------
 rm=wb.create_sheet("Read Me")
@@ -248,14 +265,13 @@ lines=[("How this model works",H),
 ("",BLK),("Color legend",B),
 ("Blue text on yellow = input you can change · Black = formula · Green = pulled from another tab.",BLK),
 ("",BLK),("Status of the numbers",B),
-("Units, name, location and type come from the Haven Homes property list. Everything marked PLACEHOLDER is an industry-style starting value; replace with Harrison Landing actuals.",BLK),
+("ACTUAL = from the Haven Homes property list or the Weekly Activity Report (WAR) week ending 10/4/2026, mostly trailing-12-month (T-12) figures. PLACEHOLDER = starting value still to be replaced: mainly channel costs, fixed costs and 2027 expiration timing.",BLK),
 ("",BLK),("Data to pull for Harrison Landing (replace placeholders)",B),
-("1. Rent roll: average rent and current occupancy (PMS).",BLK),
-("2. Lease expiration report: count of 2027 expirations by month (sets % expiring and seasonality).",BLK),
-("3. 2025–2026 renewal rate and early terminations / skips.",BLK),
-("4. CRM funnel report: leads, tours, applications, approvals, leases, ideally by lead source.",BLK),
-("5. Invoices / contracts: Zillow, Apartments.com, Google, Meta, software; note 2027 renewal pricing.",BLK),
-("6. Turn report: average days vacant (move-out to move-in).",BLK),
+("Done from the WAR: rent, occupancy, renewal rate, lease breaks, funnel, lead sources, days vacant.",BLK),
+("1. Lease expiration report: count of 2027 expirations by month (replaces the placeholder seasonality curve).",BLK),
+("2. Invoices / contracts: Zillow, Apartments.com, Rently, PPC, Apartment List, MLS, software; note 2027 renewal pricing.",BLK),
+("3. 2026 actual marketing spend by channel (for the variance column).",BLK),
+("4. Fixed-cost items: CRM, AI leasing, reputation, website, photography, signage, events.",BLK),
 ("",BLK),("Rolling out to the portfolio",B),
 ("Copy this workbook once per property (or duplicate the Inputs tab) and change the Inputs. Prosper 207 is in lease-up and needs a separate lease-up model (absorption pace, not turnover).",BLK),]
 for i,(t,f) in enumerate(lines,1):
